@@ -1,0 +1,1 @@
+50:enter 300:enter 300:enter 40:left 20:left 20:enter 30:space 40:right 20:enter 20:enter 30:space 25:left 25:left 25:enter 30:space 40:right 40:right 20:space 30:enter 30:left 20:space 40:space 30:right 25:enter 25:space

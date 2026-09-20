@@ -1,0 +1,21 @@
+2500 key enter
+4000 key enter
+5500 key enter
+7000 key left
+8500 key left
+10000 key left
+11500 key left
+13000 key left
+14500 key enter
+18000 shot B1
+21000 key left
+23000 key enter
+26000 shot B2
+29000 key right
+31000 key space
+34000 shot B3
+36000 key left
+38000 key enter
+40000 key space
+43000 shot B4
+45000 quit

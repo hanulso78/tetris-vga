@@ -1,0 +1,36 @@
+# 빌드 결과 (build.bat / build_host.sh 로 다시 만든다)
+*.o
+*.vo
+/tetris.exe
+/tetvga.exe
+/hosttest.exe
+/hostvga.exe
+/hostft.exe
+
+# 도구가 만드는 것
+/CT_UNP.EXE
+/ET_UNP.EXE
+/TT_UNP.EXE
+/ttcode.c
+/ttcode.h
+/ttvars.h
+/ttdata.c
+/TTVGA.DAT
+/orig/
+
+# 시험 / 미리보기 부산물
+/TTTEST.TXT
+/TTLOG.TXT
+/OUT.TXT
+*.BMP
+tools/_*
+tools/shots/
+tools/__pycache__/
+
+# 배포 폴더
+/release/
+
+# DOSBox 부산물
+/stdout.txt
+/stderr.txt
+/[A-Z]*.TXT

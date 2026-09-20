@@ -1,0 +1,14 @@
+2500 key enter
+4000 key enter
+5500 key enter
+7000 key enter
+11000 shot C1
+13000 key esc
+15000 shot C2
+17000 key enter
+19000 shot C3
+21000 key f1
+23000 shot C4
+25000 key f2
+27000 shot C5
+29000 quit

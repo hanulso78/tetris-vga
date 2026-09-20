@@ -1,0 +1,58 @@
+# 알아낸 함수와 변수 이름 (tools/asm2c.py 가 읽는다)
+#   <주소> <이름> [override|hook]     함수
+#   d<오프셋> <이름>                  자료 세그먼트(DS)의 변수
+#   ; 뒤는 설명
+
+0014 tt_main                ; 시작: 조이스틱 물음, 그림 읽기, 제목 -> 놀이
+025a joy_axis               ; 조이스틱 축 하나 재기 (포트 201h)
+026b joy_buttons            ; 조이스틱 단추
+0358 joy_calibrate          ; 조이스틱 가운데 잡기
+042e measure_cpu            ; 기계 속도 재기 (0040:006C 두 번 읽기)
+046d load_backgrounds       ; BKGR1..9 를 읽어 풀어 넣기
+04b1 unpack_rle hook        ; 되풀이 눌림 풀기 (ES:0 으로)
+04cf alloc_blocks           ; 배경 그림 자리 아홉 개 잡기
+0531 free_blocks
+0548 pic_to_screen          ; 배경 16000 바이트를 그림판(DS:01F2)으로
+0553 fill_rect              ; 네모 칠하기
+056c save_rect              ; 네모 떠 두기
+0595 restore_rect           ; 떠 둔 네모 도로 그리기
+05dd next_random            ; 마구잡이 수
+0618 hercules_init
+0653 hercules_present
+0a59 blit_list              ; (자리, 너비, 높이, 그림) 목록대로 그리기
+0a74 file_load              ; 열기 -> 읽기 -> 닫기
+0a95 cga_palette            ; 3D8/3D9 로 모드 5 팔레트
+0ab4 sound_tone
+0ae4 sound_off
+13c1 speed_delay            ; 기계 속도에 맞춘 기다림
+13d2 wait_key               ; 키 하나 (버퍼 비우고)
+13f2 clear_screen_buf
+13fd numlock_on
+1385 screen_flip              ; 그림판(DS:01F2) -> B800 (CGA 두 겹)
+1330 blit_sprite_hdr        ; 머리(너비,높이)가 붙은 그림 그리기
+1359 blit_sprite            ; 너비/높이를 따로 받는 그림 그리기
+145f game_loop              ; 놀이 한 판
+1ac9 key_peek
+1af9 key_wait
+1b76 text_screen            ; 글자 화면 (모드 3)
+1cea video_init             ; 모드 4 / 5 고르기
+1d24 text_fill
+20f4 draw_piece             ; 떨어지는 조각 그리기/지우기 (8x8 칸)
+2147 lock_piece
+
+d003f tile_blank            ; 8x8 칸 그림 여덟 개 (003F..00BF)
+d00cf tile_table            ; 칸 그림 자리표 (그리기용)
+d00df tile_table_erase      ; 지우개표 (모두 빈 칸)
+d00ef tile_flip             ; 그릴 차례인지 지울 차례인지
+d00f2 tile_sets             ; 위 두 표의 자리
+d01f2 screen_buf            ; 그림판 16000 바이트 (CGA 320x200, 한 줄 80 바이트)
+d4238 rng_state
+d4295 counter
+d45ba file_handle
+d45bc read_buf
+d5d89 bkgr_names
+d5d9b bkgr_segs             ; 배경 그림을 넣어 둔 자리(세그먼트) 아홉 개
+d5dad bkgr_count
+d5dec speed_ticks           ; 기계 속도 (기다림 셈)
+d5c76 key_table
+d5c8d key_jump
