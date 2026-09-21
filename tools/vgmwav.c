@@ -52,8 +52,11 @@ int main(int argc, char **argv)
 
     while (pos < len && nbuf < cap) {
         unsigned char c = b[pos];
-        if (c == 0x5A) {
+        if (c == 0x5A || c == 0x5E) {
             OPL3_WriteReg(&chip, b[pos + 1], b[pos + 2]);
+            pos += 3;
+        } else if (c == 0x5F) {
+            OPL3_WriteReg(&chip, 0x100 | b[pos + 1], b[pos + 2]);
             pos += 3;
         } else if (c == 0x61 || c == 0x62 || c == 0x63 || (c >= 0x70 && c <= 0x7F)) {
             if (c == 0x61) {

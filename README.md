@@ -78,26 +78,25 @@ python tools/dosshot.py tools/t_game.txt out.png tetvga.exe   # DOSBox 에서 �
 * **효과음**: 원판 그대로 PC 스피커다 (포트 61h 을 직접 흔든다).  옮긴 C 도 `delay_loop` 이
   8088 17 클럭만큼 진짜로 기다려 높이가 같다 — 도스박스에서 재 보니 첫 반주기가 원판 셈
   356 µs 에 실측 363 µs (스피커 토글 기록 `SPK.TXT`).
-* **배경음악** (개선판만): PC 원판에는 없다.  **아타리판 테트리스**(1988, Atari Games,
-  Brad Fuller) 음악을 애드립(OPL2)으로 옮겨 얹었다.
-  원본은 `vgz/` 의 POKEY VGM (2xPokey, AUDCTL=78 이라 칩마다 16비트 채널 둘씩 네 성부).
-  `tools/vgm2opl.py` 가 높이(`f = 1789790 / (2*(AUDF16+7))`)와 음량(AUDC 아래 4비트)을 읽어
-  OPL2 채널 0..3 에 그대로 싣고 기다림은 원본 그대로 옮긴다 (찌그러짐이 A0 이 아니면 잡음 음색).
-  `tools/mkmusic.py` 가 다섯 곡을 골라 `SOUND.DAT` 으로 묶는다:
+* **배경음악** (개선판만): 1988 년 판에는 없다.  같은 회사가 1992 년에 낸
+  **Tetris Classic** (Spectrum HoloByte, 음악 Paul Mogg) 의 OPL3(YMF262) 음악을
+  화면별로 얹었다.  원본(`vgm/`)이 이미 OPL3 스트림이라 고치지 않고 그대로 담고,
+  `ttmusic.c` 가 VGM 의 `0x5E`/`0x5F` (뱅크 0/1) 를 애드립 포트 388/389, 38A/38B 로
+  그대로 내보낸다.  `tools/mkmusic.py` 가 열여섯 곡을 `SOUND.DAT` 으로 묶는다.
 
-  | 곡 | 원본 | 언제 |
-  |---|---|---|
-  | TTTITLE | Loginska | 제목·차례표·판 고르기 |
-  | TTPLAY / 2 / 3 | Bradinsky / Troika / Kalinka | 놀이 중 (판에 따라 돌아가며) |
-  | TTOVER | Game Over | 끝났을 때 한 번 |
+  | 곡 | 언제 |
+  |---|---|
+  | TITLE | 제목·차례표·판 고르기 |
+  | LEVEL1..LEVEL10 | 놀이 중 - 판이 오를 때마다 그 판의 곡으로 (배경 그림처럼) |
+  | GAMEOVER | 끝났을 때 한 번 |
+  | SPLASH, ADVANCE, TOP10, HIGHSC | 묶음에 함께 담아 둔 것 |
 
-  귀로 확인할 때는 `tools/vgmwav.c` (Nuked OPL3 코어) 로 WAV 를 뽑는다:
-  `gcc -O2 -o tools/vgmwav.exe tools/vgmwav.c <adplug>/src/nukedopl.c -I<adplug>/src -lm`
-  → `tools/vgmwav.exe tools/TTTITLE.VGM 들어보기.wav 40`
-
-  `ttmusic.c` 가 그 VGM 을 읽어 연주하고 장면은 `ttvga.c` 가 고른다.  게임에서 **S** 로 소리를
-  끄면 음악도 멈춘다.  애드립이 없으면 조용히 넘어간다.
-  (손으로 지은 코로베이니키 편곡은 `tools/mkmusic_korob.py` 에 남겨 두었다)
+  긴 곡은 끝나면 처음부터 다시 돈다.  곡을 바꿀 때는 두 뱅크를 말끔히 비워
+  앞 곡의 4-op/NEW 설정이 남지 않게 한다.  게임에서 **S** 로 소리를 끄면 음악도 멈추고,
+  애드립이 없으면 조용히 넘어간다.
+  귀로 확인할 때는 `tools/vgmwav.c` (Nuked OPL3) 로 WAV 를 뽑는다:
+  `tools/vgmwav.exe tools/TITLE.VGM 들어보기.wav 40`
+  (아타리판 POKEY 음악을 OPL2 로 옮기던 길은 `tools/vgm2opl.py` 에 남아 있다)
 
 ## 빌드
 

@@ -1,51 +1,62 @@
 # -*- coding: utf-8 -*-
-"""TETVGA.EXE 배경음악 - 아타리판 테트리스(1988, Atari Games / Brad Fuller) 음악을
-   애드립(OPL2) VGM 으로 옮겨 SOUND.DAT 하나로 묶는다.
+"""TETVGA.EXE 배경음악 - Tetris Classic (1992, Spectrum HoloByte, 음악 Paul Mogg) 의
+   OPL3(YMF262) VGM 을 화면별로 골라 SOUND.DAT 하나로 묶는다.
 
-   쓰는 법 :  python tools/mkmusic.py [--vgm]     (--vgm: 옮긴 .VGM 도 따로 남긴다)
+   쓰는 법 :  python tools/mkmusic.py [--wav]      (--wav: 들어 보기용 WAV 도 뽑는다)
 
-   원본은 vgz/ 안의 POKEY VGM (2xPokey, 16비트 채널 네 성부).  tools/vgm2opl.py 가
-   높이와 음량을 그대로 읽어 OPL2 채널 0..3 에 실어 준다.
-
-   곡 (ttmusic.c 의 차례와 같다)
-       TTTITLE   제목, 차례표, 판 고르기   Loginska (아타리판 주제곡, 되풀이)
-       TTPLAY    놀이 중 (판 0,3,6,9)      Bradinsky
-       TTPLAY2   놀이 중 (판 1,4,7)        Troika
-       TTPLAY3   놀이 중 (판 2,5,8)        Kalinka
-       TTOVER    끝났을 때                 Game Over
-   원판 PC 판에는 배경음악이 없다 (스피커 효과음만).  효과음은 그대로 두고 음악만 얹는다.
-   (손으로 지은 코로베이니키 편곡은 tools/mkmusic_korob.py 에 남겨 두었다)
+   원본(vgm/)이 이미 OPL3 스트림이라 고치지 않고 그대로 담는다.  ttmusic.c 가
+   0x5E/0x5F (뱅크 0/1) 명령을 애드립 포트 388/389, 38A/38B 로 그대로 내보낸다.
+   (아타리판 POKEY 음악을 OPL2 로 옮기던 길은 tools/vgm2opl.py 에 남아 있다)
 """
-import os, sys, struct
+import os, sys, gzip, struct, subprocess
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from oplvgm import bundle
-import vgm2opl
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
-VGZ = os.path.join(ROOT, 'vgz')
+SRC = os.path.join(ROOT, 'vgm')
 
-#  (곡 이름, 원본 파일, 음량 올림)
+#  (곡 이름, 원본 파일)  - ttvga.h 의 MUS_* 차례와 같아야 한다
 TRACKS = [
-    ('TTTITLE', '02 Loginska.vgz', 18),
-    ('TTPLAY', '04 Bradinsky.vgz', 18),
-    ('TTPLAY2', '08 Troika.vgz', 18),
-    ('TTPLAY3', '06 Kalinka.vgz', 18),
-    ('TTOVER', '11 Game Over.vgz', 18),
+    ('SPLASH', '01_Splash.vgm'),
+    ('TITLE', '02_Title.vgm'),
+    ('LEVEL1', '03_Level1.vgm'),
+    ('LEVEL2', '05_Level2.vgm'),
+    ('LEVEL3', '06_Level3.vgm'),
+    ('LEVEL4', '07_Level4.vgm'),
+    ('LEVEL5', '08_Level5.vgm'),
+    ('LEVEL6', '09_Level6.vgm'),
+    ('LEVEL7', '10_Level7.vgm'),
+    ('LEVEL8', '11_Level8.vgm'),
+    ('LEVEL9', '12_Level9.vgm'),
+    ('LEVEL10', '13_Level10.vgm'),
+    ('ADVANCE', '04_AdvanceLevel.vgm'),
+    ('GAMEOVER', '14_GameOver.vgm'),
+    ('TOP10', '15_Top10.vgm'),
+    ('HIGHSC', '16_HighScore.vgm'),
 ]
+
+
+def load(path):
+    d = open(path, 'rb').read()
+    if d[:2] == b'\x1f\x8b':
+        d = gzip.decompress(d)
+    return d
 
 
 def main():
     songs = []
-    for name, src, boost in TRACKS:
-        data = vgm2opl.convert(vgm2opl.load(os.path.join(VGZ, src)), boost)
-        n = struct.unpack('<I', data[0x18:0x1c])[0]
-        loop = struct.unpack('<I', data[0x1c:0x20])[0]
-        print('%-8s <- %-24s %7d bytes  %5.1f초%s' % (name, src, len(data), n / 44100.0,
-                                                      '  (되풀이)' if loop else ''))
-        songs.append((name, data))
-        if '--vgm' in sys.argv:
-            open(os.path.join(ROOT, 'tools', name + '.VGM'), 'wb').write(data)
+    for name, src in TRACKS:
+        d = load(os.path.join(SRC, src))
+        n = struct.unpack('<I', d[0x18:0x1c])[0]
+        print('%-8s <- %-22s %6d bytes  %4.0f초' % (name, src, len(d), n / 44100.0))
+        songs.append((name, d))
     bundle(os.path.join(ROOT, 'SOUND.DAT'), songs)
+    if '--wav' in sys.argv:
+        exe = os.path.join(ROOT, 'tools', 'vgmwav.exe')
+        for name, d in songs[:3]:
+            tmp = os.path.join(ROOT, 'tools', name + '.VGM')
+            open(tmp, 'wb').write(d)
+            subprocess.run([exe, tmp, os.path.join(ROOT, 'tools', name + '.wav'), '45'])
 
 
 if __name__ == '__main__':

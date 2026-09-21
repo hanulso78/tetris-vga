@@ -1,0 +1,70 @@
+***********************************************
+* VGM music package                           *
+* http://www.smspower.org/music               *
+***********************************************
+Game name:           Tetris Classic
+System:              PC / DOS
+Music hardware:      Sound Blaster Pro 2 /
+                      OPL3 (YMF262)
+
+Music author:        Paul Mogg
+Game developer:      Spectrum HoloByte, Inc.
+Game publisher:      Spectrum HoloByte, Inc.
+Game release date:   1992
+
+Package created by:  Valley Bell
+Package version:     1.00
+
+Song list, in approximate game order:
+Song name                           Length:
+                                    Total  Loop
+01 Splash Screen                    0:14   -
+02 Title Screen / Main Menu         0:35   -
+03 Level 1                          0:46   -
+04 Advance a Level                  0:02   -
+05 Level 2                          0:46   -
+06 Level 3                          0:57   -
+07 Level 4                          0:54   -
+08 Level 5                          0:37   -
+09 Level 6                          0:44   -
+10 Level 7                          0:40   -
+11 Level 8                          0:59   -
+12 Level 9                          0:25   -
+13 Level 10                         0:34   -
+14 Game Over                        0:02   -
+15 You reached the Top 10!          0:02   -
+16 High Score                       1:04   1:04
+
+Total Length                        9:19  10:23
+
+
+Notes:
+This pack was made using DOSBox 0.74 vgm mod.
+
+I made this rip on request.
+
+
+There isn't much special about the game's music
+aside from the fact that the game uses
+compressed XMIDI files.
+One thing I noticed is, although unrelated to
+the OPL music version, that the game uses a
+General MIDI sound for its sound effects.
+
+Hacking was quite easy - I just edited some
+offsets in ad.mus. But I should note that the
+game refuses to load the music if the first
+offset is higher than the second one, etc.
+
+The song number indicates the song number in
+the music file. Song 14 seems to be some sort
+of SFX library and likely contains the two
+jingles that have no song number notes.
+
+
+Size reduction (vgm_cmp):
+    400.6 KB -> 272.1 KB (67.9 %)
+
+
+Package history:
+1.00 2011/09/20 Valley Bell: Initial release.

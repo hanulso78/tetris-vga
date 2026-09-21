@@ -19,13 +19,22 @@
 #include "cpu.h"
 #include "ttvga.h"
 
-#define OPL_ADDR    0x388
+#define OPL_ADDR    0x388           /* 뱅크 0 (OPL2 호환) */
 #define OPL_DATA    0x389
+#define OPL_ADDR2   0x38A           /* 뱅크 1 (OPL3 만) */
+#define OPL_DATA2   0x38B
 #define SOUND_DAT   "sound.dat"
 #define SOUND_MAGIC "SWSND10"      /* sopwith 과 같은 틀 */
 
-static const char *const songname[MUS_COUNT] = { NULL, "TTTITLE", "TTPLAY", "TTPLAY2",
-                                                 "TTPLAY3", "TTOVER" };
+static const char *const songname[MUS_COUNT] = {
+    NULL, "SPLASH", "TITLE", "LEVEL1", "LEVEL2", "LEVEL3", "LEVEL4", "LEVEL5", "LEVEL6",
+    "LEVEL7", "LEVEL8", "LEVEL9", "LEVEL10", "ADVANCE", "GAMEOVER", "TOP10", "HIGHSC"
+};
+
+/* 끝까지 가면 처음부터 다시 트는 곡 (짧은 알림 곡은 한 번만) */
+static const char loops[MUS_COUNT] = {
+    0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1
+};
 
 typedef struct {
     unsigned char *buf;
@@ -57,6 +66,16 @@ static void wr(int reg, int val)
     wait(35);
 }
 
+/* OPL3 의 둘째 뱅크 (없는 카드면 아무 데도 안 간다) */
+static void wr2(int reg, int val)
+{
+    ++music_writes;
+    outportb(OPL_ADDR2, (unsigned char)reg);
+    wait(6);
+    outportb(OPL_DATA2, (unsigned char)val);
+    wait(35);
+}
+
 static int detect(void)
 {
     unsigned char s1, s2;
@@ -77,11 +96,15 @@ static void silence(void)
 {
     int i;
 
-    for (i = 0xB0; i <= 0xB8; i++)
+    for (i = 0xB0; i <= 0xB8; i++) {
         wr(i, 0x00);
+        wr2(i, 0x00);
+    }
     wr(0xBD, 0x00);
-    for (i = 0x40; i <= 0x55; i++)
+    for (i = 0x40; i <= 0x55; i++) {
         wr(i, 0x3F);
+        wr2(i, 0x3F);
+    }
 }
 
 static void reset(void)
@@ -89,8 +112,10 @@ static void reset(void)
     int i;
 
     silence();
-    for (i = 0x01; i <= 0xF5; i++)
+    for (i = 0x01; i <= 0xF5; i++) {
         wr(i, 0x00);
+        wr2(i, 0x00);
+    }
     wr(0x01, 0x20);
 }
 
@@ -171,8 +196,11 @@ static int step(vgm_stream *s)
             s->pos = s->loop;
         }
         c = b[s->pos];
-        if (c == 0x5A) {
+        if (c == 0x5A || c == 0x5E) {           /* OPL2 / OPL3 뱅크 0 */
             wr(b[s->pos + 1], b[s->pos + 2]);
+            s->pos += 3;
+        } else if (c == 0x5F) {                 /* OPL3 뱅크 1 */
+            wr2(b[s->pos + 1], b[s->pos + 2]);
             s->pos += 3;
         } else if (c == 0x61) {
             s->next += samples(b[s->pos + 1] | b[s->pos + 2] << 8);
@@ -209,7 +237,7 @@ static void play(int which)
     if (!found)
         return;
     if (song != MUS_NONE)
-        silence();
+        reset();                        /* 앞 곡의 4-op/NEW 설정까지 지운다 */
     song = MUS_NONE;
     if (which <= MUS_NONE || which >= MUS_COUNT)
         return;
@@ -255,8 +283,12 @@ void music_poll(void)
         return;
     }
     if (!step(&track[song])) {
-        silence();
-        song = MUS_NONE;
+        if (loops[song]) {                  /* 되풀이할 곡은 처음부터 다시 */
+            rewind_(&track[song]);
+        } else {
+            silence();
+            song = MUS_NONE;
+        }
     }
     music_us += (long)((uclock() - t0) * 1000000 / UCLOCKS_PER_SEC);
 }

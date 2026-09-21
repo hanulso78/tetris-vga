@@ -13,7 +13,9 @@ void vga_file_read(const char *name, uint32_t lin, uint32_t pos, uint32_t n);
 void vga_render(uint8_t *out);      /* B800 의 CGA 화면 + 색표 -> 320x200 256색 */
 
 /* ---- 배경음악 (ttmusic.c, 애드립 OPL2 + VGM) ---- */
-enum { MUS_NONE = 0, MUS_TITLE, MUS_PLAY, MUS_PLAY2, MUS_PLAY3, MUS_OVER, MUS_COUNT };
+enum { MUS_NONE = 0, MUS_SPLASH, MUS_TITLE,
+       MUS_L1, MUS_L2, MUS_L3, MUS_L4, MUS_L5, MUS_L6, MUS_L7, MUS_L8, MUS_L9, MUS_L10,
+       MUS_ADVANCE, MUS_OVER, MUS_TOP10, MUS_HIGH, MUS_COUNT };
 
 int vga_music(void);                /* 지금 장면에 맞는 곡 */
 int music_muted(void);              /* 게임에서 소리를 껐나 (S 키) */

@@ -214,10 +214,8 @@ int music_muted(void)
 
 int vga_music(void)
 {
-    if (in_game) {                      /* 판마다 다른 곡 (아타리판처럼 돌아가며) */
-        static const int by_level[3] = { MUS_PLAY, MUS_PLAY2, MUS_PLAY3 };
-        return by_level[RB(DSEG, 0x4078) % 3];
-    }
+    if (in_game)                        /* 판마다 그 판의 곡 (원판 Tetris Classic 과 같게) */
+        return MUS_L1 + (RB(DSEG, 0x4078) % 10);
     if (over_pending) {
         if (music_done(MUS_OVER))       /* 끝 곡은 한 번만 */
             over_pending = 0;
