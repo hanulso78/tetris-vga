@@ -91,6 +91,10 @@ python tools/dosshot.py tools/t_game.txt out.png tetvga.exe   # DOSBox 에서 �
   | TTPLAY / 2 / 3 | Bradinsky / Troika / Kalinka | 놀이 중 (판에 따라 돌아가며) |
   | TTOVER | Game Over | 끝났을 때 한 번 |
 
+  귀로 확인할 때는 `tools/vgmwav.c` (Nuked OPL3 코어) 로 WAV 를 뽑는다:
+  `gcc -O2 -o tools/vgmwav.exe tools/vgmwav.c <adplug>/src/nukedopl.c -I<adplug>/src -lm`
+  → `tools/vgmwav.exe tools/TTTITLE.VGM 들어보기.wav 40`
+
   `ttmusic.c` 가 그 VGM 을 읽어 연주하고 장면은 `ttvga.c` 가 고른다.  게임에서 **S** 로 소리를
   끄면 음악도 멈춘다.  애드립이 없으면 조용히 넘어간다.
   (손으로 지은 코로베이니키 편곡은 `tools/mkmusic_korob.py` 에 남겨 두었다)

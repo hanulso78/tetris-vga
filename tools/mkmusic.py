@@ -26,11 +26,11 @@ VGZ = os.path.join(ROOT, 'vgz')
 
 #  (곡 이름, 원본 파일, 음량 올림)
 TRACKS = [
-    ('TTTITLE', '02 Loginska.vgz', 6),
-    ('TTPLAY', '04 Bradinsky.vgz', 6),
-    ('TTPLAY2', '08 Troika.vgz', 6),
-    ('TTPLAY3', '06 Kalinka.vgz', 6),
-    ('TTOVER', '11 Game Over.vgz', 6),
+    ('TTTITLE', '02 Loginska.vgz', 18),
+    ('TTPLAY', '04 Bradinsky.vgz', 18),
+    ('TTPLAY2', '08 Troika.vgz', 18),
+    ('TTPLAY3', '06 Kalinka.vgz', 18),
+    ('TTOVER', '11 Game Over.vgz', 18),
 ]
 
 

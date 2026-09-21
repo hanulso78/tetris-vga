@@ -18,6 +18,8 @@
 /TTVGA.DAT
 /SOUND.DAT
 tools/*.VGM
+tools/*.wav
+tools/vgmwav.exe
 /orig/
 
 # 시험 / 미리보기 부산물
