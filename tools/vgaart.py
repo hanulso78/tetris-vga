@@ -56,6 +56,34 @@ def coverage(px, sigma=1.25):
     return planes
 
 
+def blur_plane(a, sigma):
+    """한 겹(0..1)을 가우스로 넓게 흐린다"""
+    n = int(sigma * 2.5) + 1
+    ker = [math.exp(-(k * k) / (2.0 * sigma * sigma)) for k in range(-n, n + 1)]
+    t = sum(ker)
+    ker = [k / t for k in ker]
+    b = [0.0] * (W * H)
+    for y in range(H):
+        row = a[y * W:(y + 1) * W]
+        base = y * W
+        for x in range(W):
+            v = 0.0
+            for k in range(-n, n + 1):
+                xx = x + k
+                v += row[0 if xx < 0 else W - 1 if xx >= W else xx] * ker[k + n]
+            b[base + x] = v
+    d = [0.0] * (W * H)
+    for x in range(W):
+        col = [b[y * W + x] for y in range(H)]
+        for y in range(H):
+            v = 0.0
+            for k in range(-n, n + 1):
+                yy = y + k
+                v += col[0 if yy < 0 else H - 1 if yy >= H else yy] * ker[k + n]
+            d[y * W + x] = v
+    return d
+
+
 # ---- 색 고르개 ------------------------------------------------------------------
 def solid(name, t):
     c = pal.ramp_color(name, t)
@@ -79,11 +107,12 @@ def vmix(a, b, y0, y1):
     return f
 
 
-def dmix(dark, light, lo=0.08, hi=0.30):
-    """둘레에 검은 점이 많으면 dark (잎/그늘), 없으면 light (하늘) - 같은 CGA 색이
-       하늘도 되고 나뭇잎도 되는 그림에서 둘을 갈라 준다"""
+def dmix(dark, light, lo=0.05, hi=0.16, ink=0):
+    """넓게 본 둘레에 ink 번 색이 많으면 dark, 적으면 light.
+       같은 CGA 색이 하늘도 되고 나뭇잎도 되는 그림에서 둘을 갈라 준다 - 바로 옆만 보면
+       잎 사이 밝은 점이 하늘로 새므로 넓게 흐린 밭(cov[4..7])으로 가린다"""
     def f(x, y, cov=None):
-        d = 0.0 if cov is None else cov[0]
+        d = 0.0 if cov is None else cov[4 + ink]
         u = min(1.0, max(0.0, (d - lo) / (hi - lo)))
         u = u * u * (3 - 2 * u)
         ca, cb = light(x, y, cov), dark(x, y, cov)
@@ -130,12 +159,14 @@ def recolor(px, recipe, sharp=0.45, sigma=1.25, post=None, dither=16.0):
     """recipe: 색 번호 0..3 -> 색 고르개.  post(x, y, 원래색번호, rgb) 로 뒷손질.
        결과: 팔레트 번호 배열"""
     cov = coverage(px, sigma)
+    wide = [blur_plane([1.0 if v == c else 0.0 for v in px], 3.5) for c in range(4)]  # 넓게 본 덮임
     out = bytearray(W * H)
     cache = {}
     for y in range(H):
         for x in range(W):
             i = y * W + x
             f = [cov[c][i] for c in range(4)]
+            cv = f + [wide[0][i], wide[1][i], wide[2][i], wide[3][i]]
             own = px[i]
             f[own] += sharp                      # 제 색 쪽으로 당겨 가장자리를 세운다
             s = sum(f)
@@ -143,7 +174,7 @@ def recolor(px, recipe, sharp=0.45, sigma=1.25, post=None, dither=16.0):
             for c in range(4):
                 if f[c] <= 0.0005:
                     continue
-                cc = recipe[c](x, y, f)
+                cc = recipe[c](x, y, cv)
                 w = f[c] / s
                 r += cc[0] * w
                 g += cc[1] * w
@@ -176,15 +207,15 @@ def recipes():
         3: vmix(vgrad('sky', 0.55, 0.92, 0, 110), solid('snow', 0.95), 110, 150),
     }
     # BKGR2 공원 (나무, 꽃길, 멀리 성당)
+    #  이 그림은 청록 = 나뭇잎, 회색 = 하늘/땅 이다.  잎 사이에 섞인 밝은 점(회색)만
+    #  둘레의 청록 밀도로 가려 내어 하늘색이 새지 않게 한다.
     R['BKGR2'] = {
         0: solid('brown', 0.12),
-        # 잎과 하늘이 같은 CGA 색이다: 지평선 위에서는 둘레 검은 점으로 갈라 내고,
-        # 아래는 모두 풀밭/길로 본다
-        1: vmix(dmix(solid('green', 0.52), vgrad('sky', 0.55, 0.90, 0, 92), 0.06, 0.20),
-                solid('green', 0.44), 90, 112),
+        1: vmix(solid('green', 0.52), solid('green', 0.44), 92, 112),        # 잎 -> 아래는 풀
         2: vmix(solid('orange', 0.62), solid('red', 0.55), 120, 150),        # 꽃, 벽돌길
-        3: vmix(dmix(solid('lime', 0.66), vgrad('sky', 0.80, 0.98, 0, 92), 0.08, 0.24),
-                solid('lime', 0.74), 90, 112),
+        3: dmix(solid('lime', 0.74),                                         # 잎 사이 밝은 곳
+                vmix(vgrad('sky', 0.80, 0.98, 0, 92), solid('lime', 0.74), 92, 112),
+                0.30, 0.55, ink=1),
     }
     # BKGR3 초원의 기마병 (앞쪽에 코사크)
     R['BKGR3'] = {
