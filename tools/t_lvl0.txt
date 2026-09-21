@@ -1,0 +1,16 @@
+2500 key enter
+4000 key enter
+5500 key enter
+7000 key left
+8500 key left
+10000 key left
+11500 key left
+13000 key left
+14500 key enter
+18000 shot D1
+22000 key left
+24000 key enter
+27000 shot D2
+30000 key space
+33000 shot D3
+35000 quit

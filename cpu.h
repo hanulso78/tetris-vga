@@ -211,9 +211,11 @@ static inline void rep_stosw(void)
 void vga_enter(uint16_t fn);
 void vga_leave(uint16_t fn);
 void vga_text_pix(void);            /* 글자 한 줄을 그린 뒤 색표를 적는다 */
+void vga_text_save(void);           /* 그리기 전 그 자리 색표를 챙겨 둔다 */
 #define VGA_ENTER(fn) vga_enter(fn)
 #define VGA_LEAVE(fn) vga_leave(fn)
 #define VGA_TEXT() vga_text_pix()
+#define VGA_TEXT_SAVE() vga_text_save()
 extern int vga_fast;                /* 도스 개선판: 원판의 긴 기다림을 줄인다 */
 #define VGA_FAST(stmt) if (vga_fast) { stmt }
 #else
@@ -221,6 +223,7 @@ extern int vga_fast;                /* 도스 개선판: 원판의 긴 기다림
 #define VGA_ENTER(fn)
 #define VGA_LEAVE(fn)
 #define VGA_TEXT()
+#define VGA_TEXT_SAVE()
 #endif
 
 /* ---- 플랫폼 (sys_dos.c / tools/hosttest.c) ---- */

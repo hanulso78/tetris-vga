@@ -31,7 +31,7 @@
 1385 screen_flip              ; 그림판(DS:01F2) -> B800 (CGA 두 겹)
 1330 blit_sprite_hdr        ; 머리(너비,높이)가 붙은 그림 그리기
 1359 blit_sprite            ; 너비/높이를 따로 받는 그림 그리기
-145f game_loop              ; 놀이 한 판
+145f game_loop hook         ; 놀이 한 판 (개선판: 배경음악 갈아 끼우는 자리)
 1ac9 key_peek
 1af9 key_wait
 1b76 text_screen            ; 글자 화면 (모드 3)

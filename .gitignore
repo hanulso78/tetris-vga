@@ -16,6 +16,8 @@
 /ttvars.h
 /ttdata.c
 /TTVGA.DAT
+/SOUND.DAT
+tools/*.VGM
 /orig/
 
 # 시험 / 미리보기 부산물

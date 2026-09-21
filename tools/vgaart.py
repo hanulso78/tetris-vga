@@ -59,11 +59,11 @@ def coverage(px, sigma=1.25):
 # ---- 색 고르개 ------------------------------------------------------------------
 def solid(name, t):
     c = pal.ramp_color(name, t)
-    return lambda x, y: c
+    return lambda x, y, f=None: c
 
 
 def vgrad(name, t0, t1, y0=0, y1=H):
-    def f(x, y):
+    def f(x, y, cov=None):
         u = min(1.0, max(0.0, (y - y0) / float(y1 - y0)))
         return pal.ramp_color(name, t0 + (t1 - t0) * u)
     return f
@@ -71,24 +71,64 @@ def vgrad(name, t0, t1, y0=0, y1=H):
 
 def vmix(a, b, y0, y1):
     """위쪽은 a, 아래쪽은 b (y0..y1 에서 부드럽게 바뀐다)"""
-    def f(x, y):
+    def f(x, y, cov=None):
         u = min(1.0, max(0.0, (y - y0) / float(y1 - y0)))
         u = u * u * (3 - 2 * u)
-        ca, cb = a(x, y), b(x, y)
+        ca, cb = a(x, y, cov), b(x, y, cov)
+        return tuple(ca[k] + (cb[k] - ca[k]) * u for k in range(3))
+    return f
+
+
+def dmix(dark, light, lo=0.08, hi=0.30):
+    """둘레에 검은 점이 많으면 dark (잎/그늘), 없으면 light (하늘) - 같은 CGA 색이
+       하늘도 되고 나뭇잎도 되는 그림에서 둘을 갈라 준다"""
+    def f(x, y, cov=None):
+        d = 0.0 if cov is None else cov[0]
+        u = min(1.0, max(0.0, (d - lo) / (hi - lo)))
+        u = u * u * (3 - 2 * u)
+        ca, cb = light(x, y, cov), dark(x, y, cov)
         return tuple(ca[k] + (cb[k] - ca[k]) * u for k in range(3))
     return f
 
 
 def rect(inner, outer, x0, y0, x1, y1):
     """네모 안은 inner, 밖은 outer"""
-    def f(x, y):
-        return inner(x, y) if x0 <= x < x1 and y0 <= y < y1 else outer(x, y)
+    def f(x, y, cov=None):
+        return inner(x, y, cov) if x0 <= x < x1 and y0 <= y < y1 else outer(x, y, cov)
     return f
 
 
+# 색줄이 12 단계뿐이라 넓은 그러데이션은 띠가 진다.  점마다 조금씩 값을 흔들어
+# 이웃한 두 색이 섞이게 하면(순서 디더) 눈에는 고르게 이어져 보인다.
+BAYER = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]]
+
+
 # ---- 다시 칠하기 -----------------------------------------------------------------
-def recolor(px, recipe, sharp=0.45, sigma=1.25):
-    """recipe: 색 번호 0..3 -> 색 고르개.  결과: 팔레트 번호 배열"""
+def sharpness(px):
+    """점마다 '제 색을 얼마나 지킬지' (0 점무늬 -> 1 또렷한 경계).
+       둘레 여덟 점 가운데 같은 색이 몇인지로 가린다: 점 뿌리기(디더)는 적고,
+       면과 면의 경계나 넓은 단색은 많다."""
+    out = [0.0] * (W * H)
+    for y in range(H):
+        for x in range(W):
+            i = y * W + x
+            v = px[i]
+            n = 0
+            for dy in (-1, 0, 1):
+                yy = min(H - 1, max(0, y + dy))
+                for dx in (-1, 0, 1):
+                    if dx == 0 and dy == 0:
+                        continue
+                    xx = min(W - 1, max(0, x + dx))
+                    if px[yy * W + xx] == v:
+                        n += 1
+            out[i] = min(1.0, max(0.0, (n - 3) / 3.0))
+    return out
+
+
+def recolor(px, recipe, sharp=0.45, sigma=1.25, post=None, dither=16.0):
+    """recipe: 색 번호 0..3 -> 색 고르개.  post(x, y, 원래색번호, rgb) 로 뒷손질.
+       결과: 팔레트 번호 배열"""
     cov = coverage(px, sigma)
     out = bytearray(W * H)
     cache = {}
@@ -103,11 +143,18 @@ def recolor(px, recipe, sharp=0.45, sigma=1.25):
             for c in range(4):
                 if f[c] <= 0.0005:
                     continue
-                cc = recipe[c](x, y)
+                cc = recipe[c](x, y, f)
                 w = f[c] / s
                 r += cc[0] * w
                 g += cc[1] * w
                 b += cc[2] * w
+            if post is not None:
+                r, g, b = post(x, y, own, (r, g, b))
+            if dither:
+                t = (BAYER[y & 3][x & 3] / 15.0 - 0.5) * dither
+                r += t
+                g += t
+                b += t
             key = (int(r) >> 1, int(g) >> 1, int(b) >> 1)
             v = cache.get(key)
             if v is None:
@@ -130,10 +177,14 @@ def recipes():
     }
     # BKGR2 공원 (나무, 꽃길, 멀리 성당)
     R['BKGR2'] = {
-        0: solid('brown', 0.10),
-        1: vmix(vgrad('sky', 0.42, 0.80, 0, 84), solid('green', 0.42), 84, 104),
-        2: vmix(solid('orange', 0.60), solid('red', 0.55), 120, 150),     # 꽃, 벽돌길
-        3: vmix(vgrad('sky', 0.72, 0.96, 0, 84), solid('sand', 0.80), 84, 120),
+        0: solid('brown', 0.12),
+        # 잎과 하늘이 같은 CGA 색이다: 지평선 위에서는 둘레 검은 점으로 갈라 내고,
+        # 아래는 모두 풀밭/길로 본다
+        1: vmix(dmix(solid('green', 0.52), vgrad('sky', 0.55, 0.90, 0, 92), 0.06, 0.20),
+                solid('green', 0.44), 90, 112),
+        2: vmix(solid('orange', 0.62), solid('red', 0.55), 120, 150),        # 꽃, 벽돌길
+        3: vmix(dmix(solid('lime', 0.66), vgrad('sky', 0.80, 0.98, 0, 92), 0.08, 0.24),
+                solid('lime', 0.74), 90, 112),
     }
     # BKGR3 초원의 기마병 (앞쪽에 코사크)
     R['BKGR3'] = {
@@ -158,10 +209,10 @@ def recipes():
     }
     # BKGR6 크렘린 / 성 바실리 성당
     R['BKGR6'] = {
-        0: solid('night', 0.08),
-        1: vmix(vgrad('night', 0.30, 0.55, 0, 90), solid('teal', 0.50), 90, 130),
+        0: solid('night', 0.07),
+        1: vmix(vgrad('night', 0.34, 0.60, 0, 100), solid('teal', 0.44), 95, 135),
         2: solid('crimson', 0.66),
-        3: vmix(vgrad('violet', 0.55, 0.80, 0, 90), solid('sand', 0.86), 90, 140),
+        3: vmix(vgrad('sky', 0.32, 0.66, 0, 100), solid('sand', 0.88), 95, 140),
     }
     # BKGR7 아이스하키
     R['BKGR7'] = {
@@ -179,10 +230,10 @@ def recipes():
     }
     # BKGR9 경기장 (밤 경기)
     R['BKGR9'] = {
-        0: solid('night', 0.06),
-        1: vmix(vgrad('night', 0.25, 0.45, 0, 90), solid('lime', 0.45), 110, 150),
-        2: solid('red', 0.62),
-        3: vmix(vgrad('night', 0.55, 0.75, 0, 90), solid('stone', 0.86), 110, 150),
+        0: solid('night', 0.10),
+        1: vmix(vgrad('sky', 0.42, 0.60, 0, 100), solid('lime', 0.45), 105, 150),
+        2: solid('red', 0.64),
+        3: vmix(vgrad('sky', 0.72, 0.90, 0, 100), solid('stone', 0.88), 105, 150),
     }
     # BKGR0 붉은 벽돌 거리와 양파 지붕
     R['BKGR0'] = {
@@ -243,6 +294,48 @@ def draw_text(out, x0, y0, text, col, shadow=None):
 
 
 WELL = (118, 8, 202, 172)       # 조각이 떨어지는 칸 (10x20 칸, 8x8 점): 늘 어둡게
+PANEL = (0, 0, 116, 58)         # SCORE / LINES / NEXT 판
+# 원판의 SCORE/LINES/NEXT 글씨는 배경마다 색도 글꼴도 조금씩 달라 읽기 나쁘다.
+# 그래서 판 자리는 어둡게 깔고 글씨는 우리가 다시 찍는다 (자리는 원판 그대로).
+PANEL_LABELS = [(8, 'SCORE'), (20, 'LINES'), (32, 'NEXT')]
+LABEL_X = {'BKGR2': 17, 'BKGR6': 17}        # 그림마다 글씨가 시작하는 자리 (나머지는 8)
+# 원판 글씨가 찍힌 색 (판 자리에서는 더 어둡게 눌러 겹쳐 보이지 않게)
+LABEL_INK = {'BKGR0': 2, 'BKGR1': 2, 'BKGR2': 2, 'BKGR3': 2, 'BKGR4': 3, 'BKGR5': 3,
+             'BKGR6': 2, 'BKGR7': 3, 'BKGR8': 3, 'BKGR9': 3}
+
+
+def label_pixels(px, name):
+    """원판 그림에 찍혀 있는 SCORE/LINES/NEXT 글자 점들"""
+    ink = LABEL_INK.get(name)
+    if ink is None:
+        return set()
+    lx = LABEL_X.get(name, 8)
+    m = set()
+    for y0, t in PANEL_LABELS:
+        for y in range(y0 - 1, y0 + 8):
+            for x in range(lx - 1, lx + 9 * len(t) + 2):
+                if 0 <= x < W and 0 <= y < H and px[y * W + x] == ink:
+                    m.add((x, y))
+    return m
+
+
+def paint_labels(out, px, name):
+    """배경은 그대로 두고 글자만 금빛으로 (읽히도록 한 점 두께 그림자만)"""
+    m = label_pixels(px, name)
+    if not m:
+        return
+    gold = pal.idx('gold', 11)
+    halo = set()
+    for x, y in m:
+        for dx in (-1, 0, 1):
+            for dy in (-1, 0, 1):
+                q = (x + dx, y + dy)
+                if q not in m and 0 <= q[0] < W and 0 <= q[1] < H:
+                    halo.add(q)
+    for x, y in halo:
+        out[y * W + x] = pal.darken(out[y * W + x], 6)
+    for x, y in m:
+        out[y * W + x] = gold
 
 
 def render(name, R):
@@ -251,6 +344,8 @@ def render(name, R):
     if name not in ('TETRIS.TTL', 'SLC'):
         r[0] = rect(solid('night', 0.02), r[0], *WELL)
     out = recolor(px, r)
+    if name.startswith('BKGR'):                   # 배경은 그대로, 글자만 또렷하게
+        paint_labels(out, px, name)
     if name == 'TETRIS.TTL':                      # 256색으로 다시 그린 사람
         draw_text(out, 56, 168, 'VGA REMASTER BY IN-HAK MIN', pal.idx('gold', 9), pal.idx('brown', 1))
     return out

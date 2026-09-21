@@ -85,6 +85,7 @@ PRE = {
     0x1AD5: 'bios_sync(0x041A);',
     0x1AEB: 'bios_sync(0x041A);',
     0x1CF0: 'bios_sync(0x0487);',   # 0040:0087 EGA 정보
+    0x1E97: 'VGA_TEXT_SAVE();',     # 글자를 AND/OR 로 그리기 전 색표를 챙겨 둔다
 }
 POST = {
     0x023B: 'bios_kbflags();',  # NumLock 끄기

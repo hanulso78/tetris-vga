@@ -110,10 +110,24 @@ static void present(void)
     last_present = uclock();
 }
 
+#ifdef TTVGA
+static int no_music;                /* TTNOMUS=1 이면 배경음악 없이 */
+#endif
+
+/* 기다리는 동안 불린다.  화면과 음악은 70 분의 1 초에 한 번까지만 돌본다
+   (도스박스에서는 시계 읽기도 포트 입출력이라, 빈 되돌이마다 부르면 그것만으로
+   3 할을 잡아먹어 게임이 제 속도를 잃는다) */
 static void maybe_present(void)
 {
-    if (uclock() - last_present > UCLOCKS_PER_SEC / 70)
-        present();
+    if (uclock() - last_present <= UCLOCKS_PER_SEC / 70)
+        return;
+#ifdef TTVGA
+    if (!no_music) {
+        music_want(vga_music());
+        music_poll();
+    }
+#endif
+    present();
 }
 
 /* ---- 원판 속도 맞추기 ---------------------------------------------------------
@@ -147,6 +161,9 @@ static void text_mode(void)
 {
     __dpmi_regs r;
 
+#ifdef TTVGA
+    music_off();
+#endif
     memset(&r, 0, sizeof r);
     r.x.ax = 0x0003;
     __dpmi_int(0x10, &r);
@@ -170,6 +187,7 @@ static struct {
 static int ntev, tpos;
 static uclock_t tstart;
 static FILE *tlog;
+static void spk_dump(void);
 
 static long now_ms(void)
 {
@@ -270,6 +288,12 @@ static void test_poll(void)
                 fprintf(tlog, "%ld shot %s\n", t, tev[tpos].name);
         } else {
             outportb(0x61, (uint8_t)(inportb(0x61) & 0xFC));
+            spk_dump();
+#ifdef TTVGA
+            if (tlog)
+                fprintf(tlog, "music: adlib=%d writes=%ld polls=%ld us=%ld\n", music_found(),
+                        music_writes, music_polls, music_us);
+#endif
             if (tlog)
                 fclose(tlog);
             text_mode();
@@ -630,8 +654,33 @@ uint8_t port_in(uint16_t port)
     return inportb(port);
 }
 
+/* 시험 모드: 스피커를 흔든 시각을 적어 둔다 (효과음이 원판 높이로 나는지 보려고) */
+#define SPKMAX 4000
+static long spk_t[SPKMAX];
+static uint8_t spk_v[SPKMAX];
+static int spk_n;
+
+static void spk_dump(void)
+{
+    FILE *f;
+    int i;
+
+    if (!spk_n)
+        return;
+    f = fopen("SPK.TXT", "w");
+    if (!f)
+        return;
+    for (i = 0; i < spk_n; i++)
+        fprintf(f, "%ld %02X\n", spk_t[i], spk_v[i]);
+    fclose(f);
+}
+
 void port_out(uint16_t port, uint8_t v)
 {
+    if (test_on && port == 0x61 && spk_n < SPKMAX) {
+        spk_t[spk_n] = (long)((uclock() - tstart) * 1000000 / UCLOCKS_PER_SEC);
+        spk_v[spk_n++] = v;
+    }
     /* 우리는 VGA 모드 13h 로 보이므로 CGA/EGA 화면 레지스터는 건드리지 않는다 */
     if (port == 0x3D8 || port == 0x3D9 || (port >= 0x3B0 && port <= 0x3BF) ||
         (port >= 0x3C0 && port <= 0x3CF))
@@ -692,6 +741,9 @@ int main(int argc, char **argv)
     signal(SIGINT, on_break);
     uclock();
     no_pace = getenv("TTFAST") != 0;
+#ifdef TTVGA
+    no_music = getenv("TTNOMUS") != 0;
+#endif
     test_init();
     pace_t0 = uclock();
     cpu_reset();

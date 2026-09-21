@@ -74,6 +74,14 @@ def ramp_color(ramp, t):
     return tuple(a[i] + (b[i] - a[i]) * u for i in range(3))
 
 
+def darken(i, n=5):
+    """같은 색줄에서 n 단계 어두운 색 (테두리 그림자용)"""
+    if i < 16:
+        return 16
+    r, sh = (i - 16) // NS, (i - 16) % NS
+    return 16 + r * NS + max(0, sh - n)
+
+
 def quantize(rgb, lut={}):
     """(r, g, b) 0..255 -> 가장 가까운 팔레트 번호 (0 번은 '색 없음' 이라 쓰지 않는다)"""
     key = (int(rgb[0]) >> 2, int(rgb[1]) >> 2, int(rgb[2]) >> 2)

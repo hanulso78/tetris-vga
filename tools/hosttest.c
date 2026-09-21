@@ -22,6 +22,14 @@
 static const char *shotdir;
 static int nshot;
 
+/* 배경음악은 도스 판에만 있다 (애드립).  PC 대조 시험판에서는 빈 껍데기 */
+long music_writes, music_us, music_polls;
+void music_want(int w) { (void)w; }
+void music_poll(void) { }
+void music_off(void) { }
+int music_found(void) { return 0; }
+int music_done(int w) { (void)w; return 1; }
+
 /* 개선판 화면을 BMP 로 (키를 기다릴 때마다) */
 static void vga_shot(void)
 {

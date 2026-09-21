@@ -6,7 +6,7 @@
 | 만든 것 | 무엇 |
 |---|---|
 | `TETRIS.EXE` | 원판을 그대로 옮긴 것. CGA 모드 5 화면(검정/청록/빨강/흰색)을 VGA 13h 로 보인다 |
-| `TETVGA.EXE` | 같은 게임 코드 + 256색 그림 (`TTVGA.DAT` 가 있어야 한다) |
+| `TETVGA.EXE` | 같은 게임 코드 + 256색 그림 (`TTVGA.DAT`) + 애드립 배경음악 (`SOUND.DAT`) |
 
 두 판 모두 `CWSDPMI.EXE` 와 원판 자료 파일(`BKGR0`..`BKGR9`, `SLC`, `TETRIS.TTL`)이
 같은 폴더에 있어야 한다.  바로 쓸 수 있게 묶은 것은 `release/` 에 있다.
@@ -60,6 +60,11 @@ python tools/ftrace.py 20000 "..."   # 첫 차이를 함수 단위로 찾기
   팔레트는 `tools/pal.py` (CGA 16색 + 색줄 20 가지 x 12 단계).
 * 조각 칸 일곱 가지: `tools/tiles.py` 가 보석처럼(테두리·빛·그늘·반짝이) 그린다.
 * 글자: `1E3C` 는 AND/OR 로 그려 색표가 따라오지 않으므로, 그린 바로 뒤에 켠 점만 금빛으로.
+* 점수판: 배경은 그대로 두고 원판 글씨(SCORE/LINES/NEXT)만 금빛으로, 한 점 두께 그림자를 둘러
+  어느 배경에서나 읽히게 했다.  게임이 찍는 숫자는 바탕 밝기를 보고 금빛/짙은 색을 고른다.
+* 점 뿌리기(디더)는 둘레 여덟 점 가운데 같은 색이 몇인지로 가려 낸다: 점무늬면 고르게 풀고
+  면과 면의 경계는 또렷하게 둔다.  색줄이 12 단계뿐이라 생기는 그러데이션 띠는 순서 디더로 없앤다.
+* 하늘과 나뭇잎처럼 CGA 색이 같은 것은 '둘레의 검은 점 밀도'(`dmix`)로 갈라 칠한다.
 * 묶음 파일 만들기: `python tools/mkvga.py` → `TTVGA.DAT`
 
 ```
@@ -68,10 +73,34 @@ python tools/shotvga.py "50:enter 300:enter ..." out.png   # PC 에서 미리보
 python tools/dosshot.py tools/t_game.txt out.png tetvga.exe   # DOSBox 에서 찍기
 ```
 
+## 소리
+
+* **효과음**: 원판 그대로 PC 스피커다 (포트 61h 을 직접 흔든다).  옮긴 C 도 `delay_loop` 이
+  8088 17 클럭만큼 진짜로 기다려 높이가 같다 — 도스박스에서 재 보니 첫 반주기가 원판 셈
+  356 µs 에 실측 363 µs (스피커 토글 기록 `SPK.TXT`).
+* **배경음악** (개선판만): PC 원판에는 없다.  **아타리판 테트리스**(1988, Atari Games,
+  Brad Fuller) 음악을 애드립(OPL2)으로 옮겨 얹었다.
+  원본은 `vgz/` 의 POKEY VGM (2xPokey, AUDCTL=78 이라 칩마다 16비트 채널 둘씩 네 성부).
+  `tools/vgm2opl.py` 가 높이(`f = 1789790 / (2*(AUDF16+7))`)와 음량(AUDC 아래 4비트)을 읽어
+  OPL2 채널 0..3 에 그대로 싣고 기다림은 원본 그대로 옮긴다 (찌그러짐이 A0 이 아니면 잡음 음색).
+  `tools/mkmusic.py` 가 다섯 곡을 골라 `SOUND.DAT` 으로 묶는다:
+
+  | 곡 | 원본 | 언제 |
+  |---|---|---|
+  | TTTITLE | Loginska | 제목·차례표·판 고르기 |
+  | TTPLAY / 2 / 3 | Bradinsky / Troika / Kalinka | 놀이 중 (판에 따라 돌아가며) |
+  | TTOVER | Game Over | 끝났을 때 한 번 |
+
+  `ttmusic.c` 가 그 VGM 을 읽어 연주하고 장면은 `ttvga.c` 가 고른다.  게임에서 **S** 로 소리를
+  끄면 음악도 멈춘다.  애드립이 없으면 조용히 넘어간다.
+  (손으로 지은 코로베이니키 편곡은 `tools/mkmusic_korob.py` 에 남겨 두었다)
+
 ## 빌드
 
 ```
 build.bat            TETRIS.EXE
 build.bat vga        TETVGA.EXE
 sh build_host.sh     PC 대조 시험판
+python tools/mkvga.py    TTVGA.DAT (256색 그림)
+python tools/mkmusic.py  SOUND.DAT (배경음악, vgz/ 의 아타리 POKEY 음악을 OPL2 로)
 ```

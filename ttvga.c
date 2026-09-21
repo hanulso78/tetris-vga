@@ -184,21 +184,62 @@ void vga_file_read(const char *name, uint32_t lin, uint32_t pos, uint32_t n)
         tag_pic(LIN(DSEG, screen_buf), find_pic(cur_name));
 }
 
-/* 눌림 풀기(04B1) 가 끝나면 ES:0000 에 배경 그림 한 장이 들어 있다 */
+/* 눌림 풀기(04B1) 가 끝나면 ES:0000 에 배경 그림 한 장이 들어 있다.
+   놀이 한 판(145F) 에 들고 나는 것으로 배경음악을 고른다. */
+static int in_game, over_pending;
+
 void vga_enter(uint16_t fn)
 {
-    (void)fn;
+    if (fn == 0x145F) {
+        in_game = 1;
+        over_pending = 0;
+    }
 }
 
 void vga_leave(uint16_t fn)
 {
     if (fn == 0x04B1)
         tag_pic(LIN(ES_, 0), find_pic(cur_name));
+    else if (fn == 0x145F) {
+        in_game = 0;
+        over_pending = 1;
+    }
+}
+
+/* 원판의 소리 끄기 깃발 (S 키로 켜고 끈다) */
+int music_muted(void)
+{
+    return RB(DSEG, 0x5CBC) == 1;
+}
+
+int vga_music(void)
+{
+    if (in_game) {                      /* 판마다 다른 곡 (아타리판처럼 돌아가며) */
+        static const int by_level[3] = { MUS_PLAY, MUS_PLAY2, MUS_PLAY3 };
+        return by_level[RB(DSEG, 0x4078) % 3];
+    }
+    if (over_pending) {
+        if (music_done(MUS_OVER))       /* 끝 곡은 한 번만 */
+            over_pending = 0;
+        else
+            return MUS_OVER;
+    }
+    return MUS_TITLE;
 }
 
 /* 글자(1E3C)는 AND/OR 로 그려서 색표가 따라오지 않는다.  한 줄(2 바이트 = 8 점)을
    그린 바로 뒤에 불러, 글자가 된 점만 색을 적는다.  원판이 쓰던 CGA 색(마스크
    DS:5CD0)에 맞춰 금빛/붉은빛/푸른빛을 고른다. */
+static uint32_t text_keep[2];       /* 글자를 그리기 전 그 자리의 색표 */
+
+void vga_text_save(void)
+{
+    uint32_t a = LIN(ES_, DI);
+
+    text_keep[0] = COL[a];
+    text_keep[1] = COL[a + 1];
+}
+
 void vga_text_pix(void)
 {
     uint32_t a = LIN(ES_, DI);
@@ -206,15 +247,29 @@ void vga_text_pix(void)
     uint8_t col;
     int b, k;
 
-    if (mask == 0x5555)
-        col = 16 + 3 * 12 + 9;                  /* ice: 푸른 글자 */
-    else if (mask == 0xAAAA)
-        col = 16 + 8 * 12 + 9;                  /* orange: 따뜻한 호박빛 글자 */
-    else
-        col = 16 + 9 * 12 + 10;                 /* gold: 밝은 금빛 (보통 글자) */
+    {   /* 바탕이 밝으면 짙은 글자, 어두우면 금빛 - 어느 배경에서나 읽히게 */
+        int lum = 0, n = 0, i;
+        for (b = 0; b < 2; b++)
+            for (k = 0; k < 4; k++) {
+                uint8_t v = (uint8_t)(text_keep[b] >> (8 * k));
+                if (v) {
+                    lum += vga_pal[v][0] + vga_pal[v][1] + vga_pal[v][2];
+                    n++;
+                }
+            }
+        if (n && lum / n > 78)                  /* 밝은 바탕 (63*3 = 189 이 가장 밝다) */
+            col = 16 + 17 * 12 + 2;             /* crimson 짙은 색 */
+        else if (mask == 0x5555)
+            col = 16 + 3 * 12 + 9;              /* ice: 푸른 글자 */
+        else if (mask == 0xAAAA)
+            col = 16 + 8 * 12 + 9;              /* orange: 호박빛 */
+        else
+            col = 16 + 9 * 12 + 10;             /* gold: 밝은 금빛 */
+        (void)i;
+    }
     for (b = 0; b < 2; b++) {
         uint8_t v = b ? AH : AL;                /* 방금 켠 점들 (글자 모양 & 색 마스크) */
-        uint32_t c = COL[a + b];
+        uint32_t c = text_keep[b];              /* 글자가 아닌 점은 있던 색 그대로 */
         for (k = 0; k < 4; k++) {
             int p = (v >> (6 - 2 * k)) & 3;
             if (p)

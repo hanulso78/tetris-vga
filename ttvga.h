@@ -12,4 +12,17 @@ void vga_reset(void);               /* 조각 칸 색표 붙이기 */
 void vga_file_read(const char *name, uint32_t lin, uint32_t pos, uint32_t n);
 void vga_render(uint8_t *out);      /* B800 의 CGA 화면 + 색표 -> 320x200 256색 */
 
+/* ---- 배경음악 (ttmusic.c, 애드립 OPL2 + VGM) ---- */
+enum { MUS_NONE = 0, MUS_TITLE, MUS_PLAY, MUS_PLAY2, MUS_PLAY3, MUS_OVER, MUS_COUNT };
+
+int vga_music(void);                /* 지금 장면에 맞는 곡 */
+int music_muted(void);              /* 게임에서 소리를 껐나 (S 키) */
+void music_want(int which);
+void music_poll(void);
+void music_off(void);
+int music_found(void);
+int music_done(int which);
+extern long music_writes;           /* 시험용: 애드립에 쓴 횟수 */
+extern long music_us, music_polls;
+
 #endif
