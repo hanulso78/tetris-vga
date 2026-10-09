@@ -1,0 +1,14 @@
+2500 shot C1
+4000 key enter
+6000 key enter
+8500 key enter
+16000 key space
+19000 key left
+21000 key space
+24000 key right
+26000 key space
+29000 key space
+31000 key left
+33000 key space
+36000 shot C2
+38000 quit

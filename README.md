@@ -8,6 +8,10 @@
 | `TETRIS.EXE` | 원판을 그대로 옮긴 것. CGA 모드 5 화면(검정/청록/빨강/흰색)을 VGA 13h 로 보인다 |
 | `TETVGA.EXE` | 같은 게임 코드 + 256색 그림 (`TTVGA.DAT`) + 애드립 배경음악 (`SOUND.DAT`) |
 
+![원판 CGA 와 256색 개선판](shots/cga-vs-vga.png)
+
+*왼쪽이 원판 그대로(CGA 네 색), 오른쪽이 256색 개선판 — 같은 게임 코드가 그린 같은 화면이다.*
+
 두 판 모두 `CWSDPMI.EXE` 와 원판 자료 파일(`BKGR0`..`BKGR9`, `SLC`, `TETRIS.TTL`)이
 같은 폴더에 있어야 한다.  바로 쓸 수 있게 묶은 것은 `release/` 에 있다.
 
@@ -15,6 +19,17 @@
 release\TETVGA.EXE     256색 개선판
 release\TETRIS.EXE     원판 그대로
 ```
+
+### 화면
+
+| | |
+|---|---|
+| ![제목](shots/title.png) | ![판 고르기](shots/select.png) |
+| ![놀이 중](shots/game.png) | ![도움말과 통계](shots/panels.png) |
+
+판이 오를 때마다 배경과 음악이 그 판의 것으로 바뀐다.
+
+![판마다의 배경](shots/levels.png)
 
 ## 원판 뜯어보기
 

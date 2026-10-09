@@ -28,13 +28,19 @@ set TTJOY=%s
 %s
 exit
 ''' % (ROOT, mode, exe))
-subprocess.run([DOSBOX, '-conf', conf, '-noconsole'], cwd=os.path.dirname(DOSBOX), timeout=900)
+#  창을 띄우지 않고 돌린다 (화면을 가로채지 않게).  TTSHOW=1 이면 창을 띄운다.
+env = dict(os.environ)
+if not os.environ.get('TTSHOW'):
+    env['SDL_VIDEODRIVER'] = 'dummy'
+subprocess.run([DOSBOX, '-conf', conf, '-noconsole'], cwd=os.path.dirname(DOSBOX), timeout=900, env=env)
 names = [ln.split()[2] for ln in open(script) if len(ln.split()) >= 3 and ln.split()[1] == 'shot']
 imgs = []
 for n in names:
     fn = os.path.join(ROOT, n.upper() + '.BMP')
     if os.path.exists(fn):
         imgs.append(Image.open(fn).convert('RGB'))
+        if os.environ.get('TTKEEP'):
+            Image.open(fn).convert('RGB').save(os.path.join(ROOT, 'tools', 'shot_%s.png' % n))
         os.remove(fn)
 cols = 3
 W = Image.new('RGB', (cols * 322, max(1, (len(imgs) + cols - 1) // cols) * 202), (60, 60, 60))

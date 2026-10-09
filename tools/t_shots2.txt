@@ -1,0 +1,21 @@
+2500 shot V1
+4000 key enter
+6000 key enter
+7500 shot V2
+8500 key enter
+12000 shot V3
+16000 key space
+19000 key left
+21000 key space
+24000 key right
+26000 key space
+29000 key space
+31000 key left
+33000 key space
+36000 shot V4
+38000 key f1
+40000 shot V5
+42000 key f1
+44000 key f2
+46000 shot V6
+48000 quit
