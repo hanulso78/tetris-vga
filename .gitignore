@@ -31,8 +31,13 @@ tools/_*
 tools/shots/
 tools/__pycache__/
 
-# 배포 폴더
-/release/
+# 배포 폴더(release/)는 받아서 바로 돌릴 수 있게 저장소에 함께 둔다
+/release/*.rar
+/release/*.BMP
+/release/*.TXT.bak
+/release/TTLOG.TXT
+/release/TTTEST.TXT
+/release/SPK.TXT
 
 # DOSBox 부산물
 /stdout.txt
